@@ -10,7 +10,7 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
-    return s.replace('"', '"').replace("'", "'")
+    return s.replace('"', '\\\\"').replace("'", "\\\\'")
 
 def fix_columns_width():
     markdown("""
