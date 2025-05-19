@@ -185,5 +185,5 @@ def normalize_list_indentation(md_text: str) -> str:
             normalized_lines.append(f"{new_indent}{bullet} {str(content)}")
         else:
             normalized_lines.append(line)
-    return "
-".join(normalized_lines)
+        return "\n".join(normalized_lines)
+
