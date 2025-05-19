@@ -85,15 +85,28 @@ def main():
     load_dotenv()
     load_secrets_fron_env()
 
-    agentops_api_key = os.getenv('AGENTOPS_API_KEY')
-    # agentops_enabled = str(os.getenv('AGENTOPS_ENABLED')).lower() in ['true', '1'] # Linha original comentada
-    agentops_enabled = False # Força AgentOps a estar desabilitado
-    print("AgentOps foi explicitamente desabilitado no código.") # Adicionado para feedback
+    # Forçar a desativação do AgentOps
+    agentops_enabled = False 
+    print("AgentOps foi explicitamente desabilitado no código.")
+
+    # Se AgentOps estiver desabilitado, remove AGENTOPS_API_KEY do ambiente para este processo
+    if not agentops_enabled:
+        if 'AGENTOPS_API_KEY' in os.environ:
+            del os.environ['AGENTOPS_API_KEY']
+            print("AGENTOPS_API_KEY foi removida das variáveis de ambiente para este processo.")
+        # Também define AGENTOPS_ENABLED como 'false' no ambiente para este processo
+        os.environ['AGENTOPS_ENABLED'] = 'false'
+        print("AGENTOPS_ENABLED foi definido como 'false' nas variáveis de ambiente para este processo.")
+
+    # A lógica de inicialização original do AgentOps permanece, mas não deve ser acionada
+    # se agentops_enabled for False e a chave da API for removida.
+    agentops_api_key = os.getenv('AGENTOPS_API_KEY') # Deve ser None agora se foi removida
 
     if agentops_enabled and not ss.get('agentops_failed', False):
-        if not agentops_api_key:
+        if not agentops_api_key: # Esta condição será verdadeira se a chave foi removida
             ss.agentops_failed = True
-            print("Erro ao inicializar AgentOps: AGENTOPS_API_KEY não está definida nas variáveis de ambiente.")
+            # Esta mensagem pode não aparecer se agentops_enabled já for False
+            print("AgentOps habilitado, mas AGENTOPS_API_KEY não está definida.") 
         else:
             try:
                 import agentops
@@ -107,8 +120,6 @@ def main():
                 print(f"Erro ao inicializar AgentOps: {str(e)}")
     elif agentops_enabled and ss.get('agentops_failed', False):
         print("AgentOps está habilitado, mas falhou na inicialização anteriormente. Não tentará novamente.")
-    # Removida a cláusula else que imprimia "AgentOps não está habilitado ou já falhou" 
-    # pois a mensagem de desativação explícita já foi impressa.
         
     db_utils.initialize_db()
     load_data()
