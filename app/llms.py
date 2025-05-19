@@ -7,11 +7,14 @@ from langchain_anthropic import ChatAnthropic
 from crewai import LLM
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from litellm import completion
+import google.generativeai as genai
+
 
 def load_secrets_fron_env():
     load_dotenv(override=True)
     if "env_vars" not in st.session_state:
         st.session_state.env_vars = {
+            "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
             "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
             "OPENAI_API_BASE": os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1/"),
             "GROQ_API_KEY": os.getenv("GROQ_API_KEY"),
@@ -38,6 +41,24 @@ def restore_environment():
 
 def safe_pop_env_var(key):
     os.environ.pop(key, None)
+    
+def create_gemini_llm(model, temperature):
+    api_key = st.session_state.env_vars.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY must be set in .env file")
+
+    switch_environment({
+        "GEMINI_API_KEY": api_key,
+    })
+
+    return LLM(
+        model=model,
+        temperature=temperature,
+        api_key=api_key,
+        provider="gemini"
+    )
+
+
 
 def create_openai_llm(model, temperature):
     switch_environment({
@@ -128,8 +149,12 @@ def create_lmstudio_llm(model, temperature):
         raise ValueError("LM Studio API base not set in .env file")
 
 LLM_CONFIG = {
+    "Gemini": {
+    "models": ["gemini-2.0-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-pro-preview-05-06", "gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-lite"],
+    "create_llm": create_gemini_llm,
+    },
     "OpenAI": {
-        "models": os.getenv("OPENAI_PROXY_MODELS", "").split(",") if os.getenv("OPENAI_PROXY_MODELS") else ["gpt-4.1-mini","gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "gpt-4-turbo"],
+        "models": os.getenv("OPENAI_PROXY_MODELS", "").split(",") if os.getenv("OPENAI_PROXY_MODELS") else ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4-turbo"],
         "create_llm": create_openai_llm,
     },
     "Groq": {
