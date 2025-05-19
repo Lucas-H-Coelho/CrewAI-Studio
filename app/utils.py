@@ -10,6 +10,7 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
+    # Corrected escape logic
     return s.replace('"', '"').replace("'", "'")
 
 def fix_columns_width():
@@ -33,7 +34,9 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
         created_at = datetime.now().isoformat()
     created_at_str = datetime.fromisoformat(created_at).strftime('%Y-%m-%d %H:%M:%S')
     
-    fixed_md = normalize_list_indentation(formatted_result)
+    # Ensure formatted_result is a string before passing to normalize_list_indentation
+    safe_formatted_result = str(formatted_result) if formatted_result is not None else ""
+    fixed_md = normalize_list_indentation(safe_formatted_result)
 
     # Converte Markdown -> HTML
     markdown_html = md.markdown(
@@ -143,7 +146,7 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
             </div>
         </body>
     </html>
-    """
+    """ # Ensure this f-string is properly closed
     return html_content
 
 def format_result(result):
@@ -154,13 +157,16 @@ def format_result(result):
         if 'result' in result:
             if isinstance(result['result'], dict):
                 if 'final_output' in result['result']:
-                    return result['result']['final_output']
+                    return str(result['result']['final_output']) # Ensure string conversion
                 elif 'raw' in result['result']:
-                    return result['result']['raw']
+                    return str(result['result']['raw']) # Ensure string conversion
                 else:
                     return str(result['result'])
             elif hasattr(result['result'], 'raw'):
-                return result['result'].raw
+                 # Ensure result.raw is converted to string if it's not already
+                return str(result['result'].raw) if result['result'].raw is not None else ""
+            else:
+                return str(result['result']) # Ensure string conversion if it's some other object
         return str(result)
     return str(result)
 
@@ -171,7 +177,12 @@ def normalize_list_indentation(md_text: str) -> str:
     Preserva marcadores '-' e '*'.
     """
     import re
-    normalized_lines = []
+    normalized_lines = [] 
+    if not isinstance(md_text, str):
+        # Return empty string or md_text if it's not a string to prevent errors.
+        # Depending on expected behavior, an error might be more appropriate.
+        return "" 
+
     for line in md_text.splitlines():
         # encontra linhas com espaços no início, seguidas por marcadores '*' ou '-' 
         m = re.match(r'^(?P<spaces> +)(?P<bullet>[-*])\s+(.*)$', line)
@@ -180,10 +191,15 @@ def normalize_list_indentation(md_text: str) -> str:
             level = spaces_count // 2  # Níveis de indentação da IA (2 espaços cada)
             new_indent = ' ' * (level * 4)
             bullet = m.group('bullet')
-            content = m.group(3) # Get the content part after the bullet and space
-            # Ensure content is a string before appending
-            normalized_lines.append(f"{new_indent}{bullet} {str(content)}")
+            content_match = m.group(3) # Content part after bullet and space
+            content = str(content_match) if content_match is not None else ""
+            normalized_lines.append(f"{new_indent}{bullet} {content}")
         else:
             normalized_lines.append(line)
+    # This is line 188 (approximately, depending on exact preceding lines)
+    # Ensure the string literal "
+" is correctly formed.
     return "
 ".join(normalized_lines)
+
+# Ensure there's a newline at the very end of the file.
