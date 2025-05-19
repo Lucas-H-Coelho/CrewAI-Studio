@@ -15,14 +15,14 @@ import os
 
 def pages():
     return {
-        'Crews': PageCrews(),
-        'Tools': PageTools(),
-        'Agents': PageAgents(),
-        'Tasks': PageTasks(),
-        'Knowledge': PageKnowledge(),  # Add this line
-        'Kickoff!': PageCrewRun(),
-        'Results': PageResults(),
-        'Import/export': PageExportCrew()
+        'Equipes': PageCrews(),
+        'Ferramentas': PageTools(),
+        'Agentes': PageAgents(),
+        'Tarefas': PageTasks(),
+        'Conhecimento': PageKnowledge(),  # Add this line
+        'Iniciar!': PageCrewRun(),
+        'Resultados': PageResults(),
+        'Importar/Exportar': PageExportCrew()
     }
 
 def load_data():
@@ -39,9 +39,9 @@ def draw_sidebar():
         st.image("img/crewai_logo.png")
 
         if 'page' not in ss:
-            ss.page = 'Crews'
+            ss.page = 'Equipes'
         
-        selected_page = st.radio('Page', list(pages().keys()), index=list(pages().keys()).index(ss.page),label_visibility="collapsed")
+        selected_page = st.radio('Página', list(pages().keys()), index=list(pages().keys()).index(ss.page),label_visibility="collapsed")
         if selected_page != ss.page:
             ss.page = selected_page
             st.rerun()
@@ -56,7 +56,7 @@ def main():
             agentops.init(api_key=os.getenv('AGENTOPS_API_KEY'),auto_start_session=False)    
         except ModuleNotFoundError as e:
             ss.agentops_failed = True
-            print(f"Error initializing AgentOps: {str(e)}")            
+            print(f"Erro ao inicializar AgentOps: {str(e)}")            
         
     db_utils.initialize_db()
     load_data()

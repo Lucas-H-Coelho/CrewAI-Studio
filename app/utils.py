@@ -10,7 +10,7 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
-    return s.replace('"', '\\"').replace("'", "\\'")
+    return s.replace('"', '"').replace("'", "'")
 
 def fix_columns_width():
     markdown("""
@@ -27,7 +27,7 @@ def fix_columns_width():
 
 def generate_printable_view(crew_name, result, inputs, formatted_result, created_at=None):
     """
-    Generates a simple HTML view for printing.
+    Gera uma visualização HTML simples para impressão.
     """
     if created_at is None:
         created_at = datetime.now().isoformat()
@@ -35,48 +35,74 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
     
     fixed_md = normalize_list_indentation(formatted_result)
 
-    # Convert Markdown -> HTML
+    # Converte Markdown -> HTML
     markdown_html = md.markdown(
         fixed_md,
-        extensions=['markdown.extensions.extra']  # optional: extra for tables, code, sane_lists
+        extensions=['markdown.extensions.extra']  # opcional: extra para tabelas, código, sane_lists
     )
 
     html_content = f"""
     <html>
         <head>
-            <title>CrewAI-Studio result - {crew_name}</title>
+            <title>Resultado do CrewAI Studio - {crew_name}</title>
             <style>
                 body {{
                     font-family: 'Arial', sans-serif;
                     padding: 20px;
                     max-width: 800px;
                     margin: auto;
+                    background-color: #f4f4f4; /* Cor de fundo suave */
+                    color: #333; /* Cor do texto principal */
                 }}
                 h1 {{
-                    color: #f05252;
+                    color: #007bff; /* Azul vibrante para o título principal */
+                    text-align: center;
                 }}
                 .section {{
                     margin: 20px 0;
+                    padding: 15px;
+                    background-color: #fff; /* Fundo branco para seções */
+                    border-radius: 8px; /* Bordas arredondadas */
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra suave */
                 }}
                 .input-item {{
                     margin: 5px 0;
+                    padding: 5px;
+                    border-bottom: 1px solid #eee; /* Linha sutil entre itens */
+                }}
+                .input-item:last-child {{
+                    border-bottom: none; /* Remove a borda do último item */
                 }}
                 h2, h3, h4, h5, h6 {{
-                    color: #333;
+                    color: #0056b3; /* Azul mais escuro para subtítulos */
                     margin-top: 1em;
                 }}
                 code {{
-                    background-color: #f5f5f5;
+                    background-color: #e9ecef; /* Fundo mais claro para código */
                     padding: 2px 4px;
                     border-radius: 3px;
                     font-family: 'Consolas', 'Courier New', monospace;
+                    color: #c7254e; /* Cor para o texto do código */
                 }}
                 pre code {{
-                    background-color: #f5f5f5;
+                    background-color: #e9ecef;
                     display: block;
                     padding: 10px;
                     white-space: pre-wrap;
                     font-family: 'Consolas', 'Courier New', monospace;
+                    border: 1px solid #ddd; /* Borda sutil para blocos de código */
+                }}
+                button#printButton {{
+                    background-color: #007bff; /* Azul para o botão */
+                    color: white;
+                    padding: 10px 15px;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                }}
+                button#printButton:hover {{
+                    background-color: #0056b3; /* Azul mais escuro no hover */
                 }}
                 @media print {{
                     #printButton {{
@@ -89,22 +115,26 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }}
+                    .section {{
+                        box-shadow: none; /* Remove sombra na impressão */
+                        border: 1px solid #ddd; /* Adiciona borda para clareza na impressão */
+                    }}
                 }}
             </style>
         </head>
         <body>
             <button id="printButton" onclick="window.print();" style="margin-bottom: 20px;">
-                Print
+                Imprimir
             </button>
 
-            <h1>CrewAI-Studio result</h1>
+            <h1>Resultado do CrewAI Studio</h1>
             <div class="section">
-                <h2>Crew Information</h2>
-                <p><strong>Crew Name:</strong> {crew_name}</p>
-                <p><strong>Created:</strong> {created_at_str}</p>
+                <h2>Informações da Equipe</h2>
+                <p><strong>Nome da Equipe:</strong> {crew_name}</p>
+                <p><strong>Criado em:</strong> {created_at_str}</p>
             </div>
             <div class="section">
-                <h2>Inputs</h2>
+                <h2>Entradas</h2>
                 {''.join(f'<div class="input-item"><strong>{k}:</strong> {v}</div>' for k, v in inputs.items())}
             </div>
             <div class="page-break"></div>
@@ -118,7 +148,7 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
 
 def format_result(result):
     """
-    Returns the result in a string format, extracting relevant data from nested structures if needed.
+    Retorna o resultado em formato de string, extraindo dados relevantes de estruturas aninhadas, se necessário.
     """
     if isinstance(result, dict):
         if 'result' in result:
@@ -136,22 +166,23 @@ def format_result(result):
 
 def normalize_list_indentation(md_text: str) -> str:
     """
-    Converts lines starting with multiples of 2 spaces (AI-generated) into
-    multiples of 4 spaces so Python-Markdown sees nested lists correctly.
-    Preserves both '-' and '*' bullets.
+    Converte linhas começando com múltiplos de 2 espaços (gerado por IA) para
+    múltiplos de 4 espaços para que Python-Markdown interprete listas aninhadas corretamente.
+    Preserva marcadores '-' e '*'.
     """
     import re
     normalized_lines = []
     for line in md_text.splitlines():
-        # match lines with leading spaces, then '*' or '-' bullet
+        # encontra linhas com espaços no início, seguidas por marcadores '*' ou '-' 
         m = re.match(r'^(?P<spaces> +)(?P<bullet>[-*])\s+(.*)$', line)
         if m:
             spaces = len(m.group('spaces'))
-            level = spaces // 2  # AI indent levels (2 spaces each)
+            level = spaces // 2  # Níveis de indentação da IA (2 espaços cada)
             new_indent = ' ' * (level * 4)
             bullet = m.group('bullet')
             content = m.group(3)
             normalized_lines.append(f"{new_indent}{bullet} {content}")
         else:
             normalized_lines.append(line)
-    return "\n".join(normalized_lines)
+    return "
+".join(normalized_lines)
