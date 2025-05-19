@@ -10,10 +10,6 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
-<<<<<<< HEAD
-    # Corrected escape logic for use in generated code/strings
-=======
->>>>>>> 6fd1bb3 (asas)
     return s.replace('"', '"').replace("'", "'")
 
 def fix_columns_width():
@@ -37,9 +33,11 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
         created_at = datetime.now().isoformat()
     created_at_str = datetime.fromisoformat(created_at).strftime('%Y-%m-%d %H:%M:%S')
     
+    # Ensure formatted_result is a string before passing to normalize_list_indentation
     safe_formatted_result = str(formatted_result) if formatted_result is not None else ""
     fixed_md = normalize_list_indentation(safe_formatted_result)
 
+    # Converte Markdown -> HTML
     markdown_html = md.markdown(
         fixed_md,
         extensions=['markdown.extensions.extra']
@@ -55,38 +53,38 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
                     padding: 20px;
                     max-width: 800px;
                     margin: auto;
-                    background-color: #f4f4f4;
-                    color: #333;
+                    background-color: #f4f4f4; /* Cor de fundo suave */
+                    color: #333; /* Cor do texto principal */
                 }}
                 h1 {{
-                    color: #007bff;
+                    color: #007bff; /* Azul vibrante para o título principal */
                     text-align: center;
                 }}
                 .section {{
                     margin: 20px 0;
                     padding: 15px;
-                    background-color: #fff;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    background-color: #fff; /* Fundo branco para seções */
+                    border-radius: 8px; /* Bordas arredondadas */
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra suave */
                 }}
                 .input-item {{
                     margin: 5px 0;
                     padding: 5px;
-                    border-bottom: 1px solid #eee;
+                    border-bottom: 1px solid #eee; /* Linha sutil entre itens */
                 }}
                 .input-item:last-child {{
-                    border-bottom: none;
+                    border-bottom: none; /* Remove a borda do último item */
                 }}
                 h2, h3, h4, h5, h6 {{
-                    color: #0056b3;
+                    color: #0056b3; /* Azul mais escuro para subtítulos */
                     margin-top: 1em;
                 }}
                 code {{
-                    background-color: #e9ecef;
+                    background-color: #e9ecef; /* Fundo mais claro para código */
                     padding: 2px 4px;
                     border-radius: 3px;
                     font-family: 'Consolas', 'Courier New', monospace;
-                    color: #c7254e;
+                    color: #c7254e; /* Cor para o texto do código */
                 }}
                 pre code {{
                     background-color: #e9ecef;
@@ -94,10 +92,10 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
                     padding: 10px;
                     white-space: pre-wrap;
                     font-family: 'Consolas', 'Courier New', monospace;
-                    border: 1px solid #ddd;
+                    border: 1px solid #ddd; /* Borda sutil para blocos de código */
                 }}
                 button#printButton {{
-                    background-color: #007bff;
+                    background-color: #007bff; /* Azul para o botão */
                     color: white;
                     padding: 10px 15px;
                     border: none;
@@ -106,7 +104,7 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
                     font-size: 16px;
                 }}
                 button#printButton:hover {{
-                    background-color: #0056b3;
+                    background-color: #0056b3; /* Azul mais escuro no hover */
                 }}
                 @media print {{
                     #printButton {{
@@ -120,8 +118,8 @@ def generate_printable_view(crew_name, result, inputs, formatted_result, created
                         print-color-adjust: exact;
                     }}
                     .section {{
-                        box-shadow: none;
-                        border: 1px solid #ddd;
+                        box-shadow: none; /* Remove sombra na impressão */
+                        border: 1px solid #ddd; /* Adiciona borda para clareza na impressão */
                     }}
                 }}
             </style>
@@ -179,11 +177,7 @@ def normalize_list_indentation(md_text: str) -> str:
     import re
     normalized_lines = [] 
     if not isinstance(md_text, str):
-<<<<<<< HEAD
-        return "" 
-=======
         return ""
->>>>>>> 6fd1bb3 (asas)
 
     for line in md_text.splitlines():
         m = re.match(r'^(?P<spaces> +)(?P<bullet>[-*])\s+(.*)$', line)
@@ -193,9 +187,9 @@ def normalize_list_indentation(md_text: str) -> str:
             new_indent = ' ' * (level * 4)
             bullet = m.group('bullet')
             content_match = m.group(3)
+            # Garante que o conteúdo seja string antes de usá-lo no f-string
             content = str(content_match) if content_match is not None else ""
             normalized_lines.append(f"{new_indent}{bullet} {content}")
         else:
             normalized_lines.append(line)
-    return "
-".join(normalized_lines)
+    return "".join(normalized_lines)
