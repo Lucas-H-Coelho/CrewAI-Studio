@@ -19,11 +19,23 @@ def pages():
         'Ferramentas': PageTools(),
         'Agentes': PageAgents(),
         'Tarefas': PageTasks(),
-        'Conhecimento': PageKnowledge(),  # Add this line
+        'Conhecimento': PageKnowledge(),
         'Iniciar!': PageCrewRun(),
         'Resultados': PageResults(),
         'Importar/Exportar': PageExportCrew()
     }
+
+# Mapeamento de nomes de página antigos (inglês) para novos (português)
+page_name_translation = {
+    'Crews': 'Equipes',
+    'Tools': 'Ferramentas',
+    'Agents': 'Agentes',
+    'Tasks': 'Tarefas',
+    'Knowledge': 'Conhecimento',
+    'Kickoff!': 'Iniciar!',
+    'Results': 'Resultados',
+    'Import/export': 'Importar/Exportar'
+}
 
 def load_data():
     ss.agents = db_utils.load_agents()
@@ -33,15 +45,37 @@ def load_data():
     ss.enabled_tools = db_utils.load_tools_state()
     ss.knowledge_sources = db_utils.load_knowledge_sources()
 
-
 def draw_sidebar():
     with st.sidebar:
         st.image("img/crewai_logo.png")
 
         if 'page' not in ss:
+            ss.page = 'Equipes'  # Página padrão
+        else:
+            # Verifica se a página na sessão precisa ser traduzida
+            if ss.page in page_name_translation:
+                ss.page = page_name_translation[ss.page]
+            # Se a página atual (possivelmente traduzida) não estiver na lista de páginas válidas,
+            # redefina para a página padrão para evitar erros.
+            if ss.page not in pages().keys():
+                ss.page = 'Equipes'
+
+        current_page_keys = list(pages().keys())
+        try:
+            current_index = current_page_keys.index(ss.page)
+        except ValueError:
+            # Se mesmo após a tradução e verificação, a página não for encontrada,
+            # defina para a página padrão e pegue seu índice.
             ss.page = 'Equipes'
+            current_index = current_page_keys.index(ss.page)
         
-        selected_page = st.radio('Página', list(pages().keys()), index=list(pages().keys()).index(ss.page),label_visibility="collapsed")
+        selected_page = st.radio(
+            'Página', 
+            current_page_keys, 
+            index=current_index,
+            label_visibility="collapsed"
+        )
+        
         if selected_page != ss.page:
             ss.page = selected_page
             st.rerun()
@@ -61,7 +95,7 @@ def main():
     db_utils.initialize_db()
     load_data()
     draw_sidebar()
-    PageCrewRun.maintain_session_state() #this will persist the session state for the crew run page so crew run can be run in a separate thread
+    PageCrewRun.maintain_session_state()
     pages()[ss.page].draw()
     
 if __name__ == '__main__':
