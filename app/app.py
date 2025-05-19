@@ -84,42 +84,6 @@ def main():
     st.set_page_config(page_title="CrewAI Studio", page_icon="img/favicon.ico", layout="wide")
     load_dotenv()
     load_secrets_fron_env()
-
-    # Forçar a desativação do AgentOps
-    agentops_enabled = False 
-    print("AgentOps foi explicitamente desabilitado no código.")
-
-    # Se AgentOps estiver desabilitado, remove AGENTOPS_API_KEY do ambiente para este processo
-    if not agentops_enabled:
-        if 'AGENTOPS_API_KEY' in os.environ:
-            del os.environ['AGENTOPS_API_KEY']
-            print("AGENTOPS_API_KEY foi removida das variáveis de ambiente para este processo.")
-        # Também define AGENTOPS_ENABLED como 'false' no ambiente para este processo
-        os.environ['AGENTOPS_ENABLED'] = 'false'
-        print("AGENTOPS_ENABLED foi definido como 'false' nas variáveis de ambiente para este processo.")
-
-    # A lógica de inicialização original do AgentOps permanece, mas não deve ser acionada
-    # se agentops_enabled for False e a chave da API for removida.
-    agentops_api_key = os.getenv('AGENTOPS_API_KEY') # Deve ser None agora se foi removida
-
-    if agentops_enabled and not ss.get('agentops_failed', False):
-        if not agentops_api_key: # Esta condição será verdadeira se a chave foi removida
-            ss.agentops_failed = True
-            # Esta mensagem pode não aparecer se agentops_enabled já for False
-            print("AgentOps habilitado, mas AGENTOPS_API_KEY não está definida.") 
-        else:
-            try:
-                import agentops
-                agentops.init(api_key=agentops_api_key, auto_start_session=False)
-                print("AgentOps inicializado com sucesso.")
-            except ModuleNotFoundError as e:
-                ss.agentops_failed = True
-                print(f"Erro ao inicializar AgentOps (Módulo não encontrado): {str(e)}")
-            except Exception as e: 
-                ss.agentops_failed = True
-                print(f"Erro ao inicializar AgentOps: {str(e)}")
-    elif agentops_enabled and ss.get('agentops_failed', False):
-        print("AgentOps está habilitado, mas falhou na inicialização anteriormente. Não tentará novamente.")
         
     db_utils.initialize_db()
     load_data()
