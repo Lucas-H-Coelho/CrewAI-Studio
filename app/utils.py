@@ -10,7 +10,7 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
-    return s.replace('"', '\\\\"').replace("'", "\\\\'")
+    return s.replace('"', '"').replace("'", "'")
 
 def fix_columns_width():
     markdown("""
@@ -176,12 +176,13 @@ def normalize_list_indentation(md_text: str) -> str:
         # encontra linhas com espaços no início, seguidas por marcadores '*' ou '-' 
         m = re.match(r'^(?P<spaces> +)(?P<bullet>[-*])\s+(.*)$', line)
         if m:
-            spaces = len(m.group('spaces'))
-            level = spaces // 2  # Níveis de indentação da IA (2 espaços cada)
+            spaces_count = len(m.group('spaces'))
+            level = spaces_count // 2  # Níveis de indentação da IA (2 espaços cada)
             new_indent = ' ' * (level * 4)
             bullet = m.group('bullet')
-            content = m.group(3)
-            normalized_lines.append(f"{new_indent}{bullet} {content}")
+            content = m.group(3) # Get the content part after the bullet and space
+            # Ensure content is a string before appending
+            normalized_lines.append(f"{new_indent}{bullet} {str(content)}")
         else:
             normalized_lines.append(line)
     return "
