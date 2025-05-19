@@ -10,7 +10,10 @@ def rnd_id(length=8):
     return random_text
 
 def escape_quotes(s):
+<<<<<<< HEAD
     # Corrected escape logic for use in generated code/strings
+=======
+>>>>>>> 6fd1bb3 (asas)
     return s.replace('"', '"').replace("'", "'")
 
 def fix_columns_width():
@@ -176,7 +179,11 @@ def normalize_list_indentation(md_text: str) -> str:
     import re
     normalized_lines = [] 
     if not isinstance(md_text, str):
+<<<<<<< HEAD
         return "" 
+=======
+        return ""
+>>>>>>> 6fd1bb3 (asas)
 
     for line in md_text.splitlines():
         m = re.match(r'^(?P<spaces> +)(?P<bullet>[-*])\s+(.*)$', line)
