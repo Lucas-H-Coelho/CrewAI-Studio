@@ -84,13 +84,29 @@ def main():
     st.set_page_config(page_title="CrewAI Studio", page_icon="img/favicon.ico", layout="wide")
     load_dotenv()
     load_secrets_fron_env()
-    if (str(os.getenv('AGENTOPS_ENABLED')).lower() in ['true', '1']) and not ss.get('agentops_failed', False):
-        try:
-            import agentops
-            agentops.init(api_key=os.getenv('AGENTOPS_API_KEY'),auto_start_session=False)    
-        except ModuleNotFoundError as e:
+
+    agentops_api_key = os.getenv('AGENTOPS_API_KEY')
+    agentops_enabled = str(os.getenv('AGENTOPS_ENABLED')).lower() in ['true', '1']
+
+    if agentops_enabled and not ss.get('agentops_failed', False):
+        if not agentops_api_key:
             ss.agentops_failed = True
-            print(f"Erro ao inicializar AgentOps: {str(e)}")            
+            print("Erro ao inicializar AgentOps: AGENTOPS_API_KEY não está definida nas variáveis de ambiente.")
+        else:
+            try:
+                import agentops
+                agentops.init(api_key=agentops_api_key, auto_start_session=False)
+                print("AgentOps inicializado com sucesso.") # Adicionado para feedback
+            except ModuleNotFoundError as e:
+                ss.agentops_failed = True
+                print(f"Erro ao inicializar AgentOps (Módulo não encontrado): {str(e)}")
+            except Exception as e: # Captura outras exceções de inicialização do AgentOps
+                ss.agentops_failed = True
+                print(f"Erro ao inicializar AgentOps: {str(e)}")
+    elif agentops_enabled and ss.get('agentops_failed', False):
+        print("AgentOps está habilitado, mas falhou na inicialização anteriormente. Não tentará novamente.")
+    else:
+        print("AgentOps não está habilitado ou já falhou.") # Adicionado para feedback
         
     db_utils.initialize_db()
     load_data()
