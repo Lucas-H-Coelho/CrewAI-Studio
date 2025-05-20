@@ -3,7 +3,8 @@ import streamlit as st
 from utils import rnd_id, fix_columns_width
 from streamlit import session_state as ss
 from datetime import datetime
-from llms import llm_providers_and_models, create_llm
+# MODIFICADO: Adicionada importação de create_embedding_fn
+from llms import llm_providers_and_models, create_llm, create_embedding_fn
 import db_utils
 
 class MyCrew:
@@ -40,7 +41,6 @@ class MyCrew:
     def get_crewai_crew(self, *args, **kwargs) -> Crew:
         crewai_agents = [agent.get_crewai_agent() for agent in self.agents]
 
-        # Create a dictionary to hold the Task objects
         task_objects = {}
 
         def create_task(task):
@@ -59,7 +59,6 @@ class MyCrew:
                     else:
                         context_tasks.append(task_objects[context_task_id])
 
-            # Only pass context if it's an async task or if specific context is defined
             if task.async_execution or context_tasks:
                 crewai_task = task.get_crewai_task(context_from_async_tasks=context_tasks)
             else:
@@ -68,18 +67,14 @@ class MyCrew:
             task_objects[task.id] = crewai_task
             return crewai_task
 
-        # Create all tasks, resolving dependencies recursively
         for task in self.tasks:
             create_task(task)
 
-        # Collect the final list of tasks in the original order
         crewai_tasks = [task_objects[task.id] for task in self.tasks]
 
-        # Add knowledge sources if they exist
         knowledge_sources = []
         if 'knowledge_sources' in ss and self.knowledge_source_ids:
             valid_knowledge_source_ids = []
-            
             for ks_id in self.knowledge_source_ids:
                 ks = next((k for k in ss.knowledge_sources if k.id == ks_id), None)
                 if ks:
@@ -88,55 +83,52 @@ class MyCrew:
                         valid_knowledge_source_ids.append(ks_id)
                     except Exception as e:
                         print(f"Error loading knowledge source {ks.id}: {str(e)}")
-            
-            # If any knowledge sources were invalid, update the list
             if len(valid_knowledge_source_ids) != len(self.knowledge_source_ids):
                 self.knowledge_source_ids = valid_knowledge_source_ids
                 db_utils.save_crew(self)
 
-        # Create the crew with knowledge sources
+        # MODIFICADO: Definir o embedder Gemini se houver fontes de conhecimento
+        crew_embedder = None
+        if knowledge_sources:
+            try:
+                # Você pode tornar "Gemini: models/embedding-001" configurável se desejar
+                gemini_embedding_model_name = "Gemini: models/embedding-001"
+                # Verificar se a GEMINI_API_KEY está disponível
+                if ss.env_vars.get("GEMINI_API_KEY"):
+                    crew_embedder = create_embedding_fn(gemini_embedding_model_name)
+                    print(f"Usando Gemini embedder: {gemini_embedding_model_name}")
+                else:
+                    print("GEMINI_API_KEY não encontrada. O embedder padrão (OpenAI) será usado se nenhuma chave OpenAI for fornecida.")
+                    # Se a chave Gemini não estiver lá, ele voltará ao comportamento padrão (que causa o erro se a chave OpenAI também não estiver lá)
+            except Exception as e:
+                print(f"Erro ao criar o embedder Gemini: {e}. Usando o embedder padrão.")
+                # Lidar com o erro, talvez logar e continuar sem o embedder Gemini
+
+
+        crew_params = {
+            "agents": crewai_agents,
+            "tasks": crewai_tasks,
+            "cache": self.cache,
+            "process": self.process,
+            "max_rpm": self.max_rpm,
+            "verbose": self.verbose,
+            "memory": self.memory,
+            "planning": self.planning,
+            "knowledge_sources": knowledge_sources if knowledge_sources else None,
+        }
+
+        # MODIFICADO: Adicionar embedder aos parâmetros da Crew se definido
+        if crew_embedder:
+            crew_params["embedder"] = crew_embedder
+
         if self.manager_llm:
-            return Crew(
-                agents=crewai_agents,
-                tasks=crewai_tasks,
-                cache=self.cache,
-                process=self.process,
-                max_rpm=self.max_rpm,
-                verbose=self.verbose,
-                manager_llm=create_llm(self.manager_llm),
-                memory=self.memory,
-                planning=self.planning,
-                knowledge_sources=knowledge_sources if knowledge_sources else None,
-                *args, **kwargs
-            )
+            crew_params["manager_llm"] = create_llm(self.manager_llm)
         elif self.manager_agent:
-            return Crew(
-                agents=crewai_agents,
-                tasks=crewai_tasks,
-                cache=self.cache,
-                process=self.process,
-                max_rpm=self.max_rpm,
-                verbose=self.verbose,
-                manager_agent=self.manager_agent.get_crewai_agent(),
-                memory=self.memory,
-                planning=self.planning,
-                knowledge_sources=knowledge_sources if knowledge_sources else None,
-                *args, **kwargs
-            )
-        cr = Crew(
-            agents=crewai_agents,
-            tasks=crewai_tasks,
-            cache=self.cache,
-            process=self.process,
-            max_rpm=self.max_rpm,
-            verbose=self.verbose,
-            memory=self.memory,
-            planning=self.planning,
-            knowledge_sources=knowledge_sources if knowledge_sources else None,
-            *args, **kwargs
-        )
-        return cr
-    
+            crew_params["manager_agent"] = self.manager_agent.get_crewai_agent()
+        
+        crew_params.update(kwargs)
+        return Crew(**crew_params)
+
     def update_knowledge_sources(self):
         self.knowledge_source_ids = ss[f'knowledge_sources_{self.id}']
         db_utils.save_crew(self)
@@ -242,7 +234,6 @@ class MyCrew:
                 st.text_input("Name (just id, it doesn't affect anything)", value=self.name, key=name_key, on_change=self.update_name)
                 st.selectbox("Process", options=[Process.sequential, Process.hierarchical], index=[Process.sequential, Process.hierarchical].index(self.process), key=process_key, on_change=self.update_process)
                 st.multiselect("Agents", options=[agent.role for agent in ss.agents], default=[agent.role for agent in self.agents], key=agents_key, on_change=self.update_agents)                
-                # Filter tasks by selected agents
                 available_tasks = [task for task in ss.tasks if task.agent and task.agent.id in [agent.id for agent in self.agents]]
                 available_task_ids = [task.id for task in available_tasks]
                 default_task_ids = [task.id for task in self.tasks if task.id in available_task_ids]             
@@ -254,25 +245,6 @@ class MyCrew:
                 st.checkbox("Cache", value=self.cache, key=cache_key, on_change=self.update_cache)
                 st.checkbox("Planning", value=self.planning, key=planning_key, on_change=self.update_planning)
                 st.number_input("Max req/min", value=self.max_rpm, key=max_rpm_key, on_change=self.update_max_rpm)  
-                # for some reason knowledge sources for crews are not working, use the knowledge sources in the agents instead
-                # if 'knowledge_sources' in ss and len(ss.knowledge_sources) > 0:
-                #     knowledge_source_options = [ks.id for ks in ss.knowledge_sources]
-                #     knowledge_source_labels = {ks.id: ks.name for ks in ss.knowledge_sources}
-                #     valid_knowledge_sources = [ks_id for ks_id in self.knowledge_source_ids 
-                #                             if ks_id in knowledge_source_options]
-
-                #     if len(valid_knowledge_sources) != len(self.knowledge_source_ids):
-                #         self.knowledge_source_ids = valid_knowledge_sources
-                #         db_utils.save_crew(self)
-                #     st.multiselect(
-                #         "Knowledge Sources",
-                #         options=knowledge_source_options,
-                #         default=valid_knowledge_sources,
-                #         format_func=lambda x: knowledge_source_labels.get(x, "Unknown"),
-                #         key=f"knowledge_sources_{self.id}",
-                #         on_change=self.update_knowledge_sources
-                #     )
-
                 st.button("Save", on_click=self.set_editable, args=(False,), key=rnd_id())
         else:
             fix_columns_width()
