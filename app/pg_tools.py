@@ -15,8 +15,7 @@ class PageTools:
         if 'tools' not in ss:
             ss.tools = []
         ss.tools.append(tool_instance)
-        db_utils.save_tool(tool_instance)  # Save tool to database
-
+        db_utils.save_tool(tool_instance)
     def remove_tool(self, tool_id):
         ss.tools = [tool for tool in ss.tools if tool.tool_id != tool_id]
         db_utils.delete_tool(tool_id)
@@ -67,3 +66,4 @@ class PageTools:
     def draw(self):
         st.subheader(self.name)
         self.draw_tools()
+

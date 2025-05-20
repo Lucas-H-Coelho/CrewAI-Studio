@@ -19,7 +19,7 @@ def pages():
         'Tools': PageTools(),
         'Agents': PageAgents(),
         'Tasks': PageTasks(),
-        'Knowledge': PageKnowledge(),  # Add this line
+        'Knowledge': PageKnowledge(),
         'Kickoff!': PageCrewRun(),
         'Results': PageResults(),
         'Import/export': PageExportCrew()
@@ -61,7 +61,7 @@ def main():
     db_utils.initialize_db()
     load_data()
     draw_sidebar()
-    PageCrewRun.maintain_session_state() #this will persist the session state for the crew run page so crew run can be run in a separate thread
+    PageCrewRun.maintain_session_state()
     pages()[ss.page].draw()
     
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ from litellm import completion
 import google.generativeai as genai
 
 
+
 def load_secrets_fron_env():
     load_dotenv(override=True)
     if "env_vars" not in st.session_state:
@@ -57,6 +58,30 @@ def create_gemini_llm(model, temperature):
         api_key=api_key,
         provider="gemini"
     )
+    
+def create_gemini_embedding_model(model, task_type="retrieval_document"):
+    api_key = st.session_state.env_vars.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY must be set in .env file")
+
+    switch_environment({
+        "GEMINI_API_KEY": api_key,
+    })
+
+    genai.configure(api_key=api_key)
+
+    def embed(text):
+        response = genai.embed_content(
+            model=model,
+            content=text,
+            task_type=task_type,
+            title="Embedding"
+        )
+        return response["embedding"]
+
+    restore_environment()
+    return embed
+
 
 
 
@@ -150,7 +175,13 @@ def create_lmstudio_llm(model, temperature):
 
 LLM_CONFIG = {
     "Gemini": {
-    "models": ["gemini-2.0-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-pro-preview-05-06", "gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-lite"],
+    "models": ["gemini-2.0-flash",
+               "gemini-2.5-flash-preview-04-17",
+               "gemini-2.5-pro-preview-05-06",
+               "gemini-2.0-flash-preview-image-generation",
+               "gemini-2.0-flash-lite",
+               "veo-2.0-generate-001",
+               "gemini-embedding-exp-03-07",],
     "create_llm": create_gemini_llm,
     },
     "OpenAI": {
@@ -178,6 +209,29 @@ LLM_CONFIG = {
         "create_llm": create_xai_llm,
     },
 }
+
+EMBEDDING_CONFIG = {
+    "Gemini": {
+        "models": ["models/embedding-001"],
+        "create_embedding": create_gemini_embedding_model,
+    },
+    
+}
+
+def embedding_providers_and_models():
+    return [f"{provider}: {model}" for provider in EMBEDDING_CONFIG.keys() for model in EMBEDDING_CONFIG[provider]["models"]]
+
+def create_embedding_fn(provider_and_model, task_type="retrieval_document"):
+    provider, model = provider_and_model.split(": ")
+    create_fn = EMBEDDING_CONFIG.get(provider, {}).get("create_embedding")
+
+    if create_fn:
+        embedding_fn = create_fn(model, task_type)
+        restore_environment()  # Restaura o ambiente após configuração
+        return embedding_fn
+    else:
+        raise ValueError(f"Embedding provider {provider} is not recognized or not supported")
+
 
 def llm_providers_and_models():
     return [f"{provider}: {model}" for provider in LLM_CONFIG.keys() for model in LLM_CONFIG[provider]["models"]]
