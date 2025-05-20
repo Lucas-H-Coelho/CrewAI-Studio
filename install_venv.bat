@@ -14,7 +14,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Installing requirements...
-uv pip install -r requirements.txt --no-cache
+pip install -r requirements.txt --no-cache
 if %errorlevel% neq 0 (
     echo Failed to install requirements
     exit /b %errorlevel%
@@ -22,7 +22,7 @@ if %errorlevel% neq 0 (
 set /p install_agentops="Do you want to install agentops? (y/n): "
 if /i "%install_agentops%"=="y" (
     echo Installing agentops...
-    uv pip install agentops
+    pip install agentops
     if %errorlevel% neq 0 (
         echo Failed to install agentops
         exit /b %errorlevel%
