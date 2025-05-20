@@ -3,7 +3,6 @@ import streamlit as st
 from utils import rnd_id, fix_columns_width
 from streamlit import session_state as ss
 from datetime import datetime
-# MODIFICADO: Adicionada importação de create_embedding_fn
 from llms import llm_providers_and_models, create_llm, create_embedding_fn
 import db_utils
 
@@ -40,13 +39,11 @@ class MyCrew:
 
     def get_crewai_crew(self, *args, **kwargs) -> Crew:
         crewai_agents = [agent.get_crewai_agent() for agent in self.agents]
-
         task_objects = {}
 
         def create_task(task):
             if task.id in task_objects:
                 return task_objects[task.id]
-
             context_tasks = []
             if task.async_execution or task.context_from_async_tasks_ids or task.context_from_sync_tasks_ids:
                 for context_task_id in (task.context_from_async_tasks_ids or []) + (task.context_from_sync_tasks_ids or []):
@@ -58,18 +55,15 @@ class MyCrew:
                             print(f"Warning: Context task with id {context_task_id} not found for task {task.id}")
                     else:
                         context_tasks.append(task_objects[context_task_id])
-
             if task.async_execution or context_tasks:
                 crewai_task = task.get_crewai_task(context_from_async_tasks=context_tasks)
             else:
                 crewai_task = task.get_crewai_task()
-
             task_objects[task.id] = crewai_task
             return crewai_task
 
         for task in self.tasks:
             create_task(task)
-
         crewai_tasks = [task_objects[task.id] for task in self.tasks]
 
         knowledge_sources = []
@@ -87,24 +81,33 @@ class MyCrew:
                 self.knowledge_source_ids = valid_knowledge_source_ids
                 db_utils.save_crew(self)
 
-        # MODIFICADO: Definir o embedder Gemini se houver fontes de conhecimento
         crew_embedder = None
+        # ***** INÍCIO DAS LINHAS DE DEBUG *****
+        print(f"DEBUG MY_CREW.PY: Verificando ss.env_vars antes de criar embedder.")
+        if 'env_vars' in ss:
+            print(f"DEBUG MY_CREW.PY: ss.env_vars encontrado. Conteúdo: {ss.env_vars}")
+            gemini_key_present = ss.env_vars.get("GEMINI_API_KEY")
+            if gemini_key_present:
+                print(f"DEBUG MY_CREW.PY: GEMINI_API_KEY encontrada em ss.env_vars.")
+            else:
+                print(f"DEBUG MY_CREW.PY: GEMINI_API_KEY NÃO encontrada em ss.env_vars.")
+        else:
+            print(f"DEBUG MY_CREW.PY: ss.env_vars NÃO encontrado na session_state.")
+        # ***** FIM DAS LINHAS DE DEBUG *****
+
         if knowledge_sources:
             try:
-                # Você pode tornar "Gemini: models/embedding-001" configurável se desejar
                 gemini_embedding_model_name = "Gemini: models/embedding-001"
-                # Verificar se a GEMINI_API_KEY está disponível
-                if ss.env_vars.get("GEMINI_API_KEY"):
+                # Modificado para verificar explicitamente ss.env_vars e a chave
+                if 'env_vars' in ss and ss.env_vars.get("GEMINI_API_KEY"):
+                    print(f"DEBUG MY_CREW.PY: Tentando criar embedder Gemini com o modelo: {gemini_embedding_model_name}")
                     crew_embedder = create_embedding_fn(gemini_embedding_model_name)
-                    print(f"Usando Gemini embedder: {gemini_embedding_model_name}")
+                    print(f"DEBUG MY_CREW.PY: Embedder Gemini criado com sucesso: {crew_embedder}")
                 else:
-                    print("GEMINI_API_KEY não encontrada. O embedder padrão (OpenAI) será usado se nenhuma chave OpenAI for fornecida.")
-                    # Se a chave Gemini não estiver lá, ele voltará ao comportamento padrão (que causa o erro se a chave OpenAI também não estiver lá)
+                    print("DEBUG MY_CREW.PY: Condição para criar embedder Gemini não atendida (GEMINI_API_KEY ausente ou ss.env_vars ausente).")
             except Exception as e:
-                print(f"Erro ao criar o embedder Gemini: {e}. Usando o embedder padrão.")
-                # Lidar com o erro, talvez logar e continuar sem o embedder Gemini
-
-
+                print(f"DEBUG MY_CREW.PY: Erro ao criar o embedder Gemini: {e}. Usando o embedder padrão (None).")
+        
         crew_params = {
             "agents": crewai_agents,
             "tasks": crewai_tasks,
@@ -117,9 +120,12 @@ class MyCrew:
             "knowledge_sources": knowledge_sources if knowledge_sources else None,
         }
 
-        # MODIFICADO: Adicionar embedder aos parâmetros da Crew se definido
         if crew_embedder:
             crew_params["embedder"] = crew_embedder
+            print(f"DEBUG MY_CREW.PY: Parâmetro 'embedder' adicionado à crew_params com Gemini embedder.")
+        else:
+            print(f"DEBUG MY_CREW.PY: Nenhum crew_embedder (Gemini) foi definido. Crew usará o padrão.")
+
 
         if self.manager_llm:
             crew_params["manager_llm"] = create_llm(self.manager_llm)
@@ -127,6 +133,7 @@ class MyCrew:
             crew_params["manager_agent"] = self.manager_agent.get_crewai_agent()
         
         crew_params.update(kwargs)
+        print(f"DEBUG MY_CREW.PY: Parâmetros finais para criar Crew: {crew_params}")
         return Crew(**crew_params)
 
     def update_knowledge_sources(self):
